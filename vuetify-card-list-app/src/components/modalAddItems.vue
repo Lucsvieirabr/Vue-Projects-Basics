@@ -1,45 +1,51 @@
 <template>
-  <v-container>
-    <v-row class="text-center ma-5">
-      <v-col cols="12" md="12">
-        <v-dialog v-model="showModalDt" max-width="340" @click:outside="$emit('close')">
-            <add-item-form @edit="submitEditItem" @submit="submitForm" :editing="editing"></add-item-form>
-        </v-dialog>
-      </v-col>
-    </v-row>
-  </v-container>
+  <v-dialog v-model="model" max-width="340" @click:outside="$emit('close')">
+    <add-item-form
+      @edit="submitEditItem"
+      @submit="submitForm"
+      :editing="editing"
+    ></add-item-form>
+  </v-dialog>
 </template>
 
 <script>
-  import AddItemForm from '@/components/addItemForm.vue'
-  export default {
-    data () {
-      return {
-        btn: null,
-        showModalDt: false,
-      }
+import AddItemForm from "@/components/addItemForm.vue";
+export default {
+  data() {
+    return {
+      btn: null,
+    };
+  },
+  methods: {
+    submitForm(e) {
+      this.$emit("submit", e);
     },
-    methods:{
-      submitForm(e) {
-        this.$emit('submit', e)
+    submitEditItem(e) {
+      this.$emit("edit", e);
+    },
+  },
+  computed: {
+    model: {
+      get() {
+        return this.showModal;
       },
-      submitEditItem(e) {
-        this.$emit('edit', e)
-      }
-      
-    },
-    props:{
-      editing: {
-        type: Object,
-        default: null
+      set(value) {
+        this.$emit("update:showModal", value);
       },
-      showModal: {
-        type: Boolean,
-        default: false
-      }
     },
-    mounted() {
-      this.showModalDt = this.showModal
-    }
-  }
+  },
+  props: {
+    editing: {
+      type: Object,
+      default: null,
+    },
+    showModal: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  mounted() {
+    this.model = this.showModal;
+  },
+};
 </script>

@@ -1,113 +1,127 @@
 <template>
   <v-app>
+    <v-main>
+      <hero-main title="Card List App" subtitle="A Vuetify List of cards" />
 
-    <v-main >  
+      <v-container class="d-flex justify-center">
+        <v-btn
+          class="position-relative"
+          @click="showModal = true"
+          prepend-icon="mdi-plus-thick"
+          width="204"
+          color="primary"
+        >
+          Add Item
+        </v-btn>
 
-      <hero-main title="Card List App" subtitle="A Vuetify List of cards"/>
-
-        <v-container class="d-flex justify-center">
-
-          <v-btn
-            class="position-relative" 
-            @click="showModal = true"
-            prepend-icon="mdi-plus-thick"
-            width="204"
-            color="primary"
-          >
-            Add Item
-          </v-btn>
-
-          <modal-add-items 
-          v-if="showModal" 
-          @edit="handleEditSubmit" 
-          @submit="handleSubmit" 
-          :editing="editingCard" 
-          :show-modal="showModal" 
-          @close="showModal = false"
+        <modal-add-items
+          v-if="showModal"
+          @edit="handleEditSubmit"
+          @submit="handleSubmit"
+          :editing="editingCard"
+          :show-modal="showModal"
+          @update:showModal="(e) => (showModal = e)"
+          @close="closeModal"
           class="position-absolute"
+        />
+      </v-container>
+
+      <v-row justify="center">
+        <v-col cols="6" md="3">
+          <search-input
+            :model-value="searchText"
+            @update:model-value="(newValue) => (searchText = newValue)"
           />
-
-        </v-container> 
-
-        <search-input @inputText="handleInput"/>
-
+        </v-col>
+        <v-col cols="6" md="3" class="justify-start">
+          <chips-input
+            :model-value="chips"
+            @update:model-value="(newValue) => (chips = newValue)"
+          />
+        </v-col>
+      </v-row>
       <v-container grid-list-md>
-
         <v-row>
-
           <v-col
-            v-for="card, i in visibleCards"
-            :key="card.i"
+            v-for="(card, i) in visibleCards"
+            :key="i"
             cols="12"
             sm="6"
             md="4"
           >
-            <custom-card :cardInfo="card" @delete="handleDelete" @edit="handleEdit"/>
-
+            <custom-card
+              :cardInfo="card"
+              @delete="handleDelete"
+              @edit="handleEdit"
+            />
           </v-col>
-
         </v-row>
-
       </v-container>
-
     </v-main>
-
   </v-app>
 </template>
 
 <script>
-  import HeroMain from '@/components/HeroMain.vue'
-  import ModalAddItems from '@/components/modalAddItems.vue'
-  import CustomCard from '@/components/CustomCard.vue'
-  import SearchInput from '@/components/SearchInput.vue'
-  
-  export default {
-    data() {
-      return {
-        cards: [],
-        searchText: '',
-        editingCard: null,
-        showModal: false,
+import HeroMain from "@/components/HeroMain.vue";
+import ModalAddItems from "@/components/modalAddItems.vue";
+import CustomCard from "@/components/CustomCard.vue";
+import SearchInput from "@/components/SearchInput.vue";
+import ChipsInput from "@/components/chipsInput.vue";
+export default {
+  data() {
+    return {
+      cards: {},
+      searchText: "",
+      editingCard: null,
+      showModal: false,
+      chips: [],
+    };
+  },
+  computed: {
+    visibleCards() {
+      if (!this.searchText && !this.chips.length) {
+        return this.cards;
       }
-    },
-    computed: {
-      visibleCards() {
-        if(!this.searchText) {
-          return this.cards
+      const filteredCards = Object.keys(this.cards).reduce((acc, key) => {
+        const card = this.cards[key];
+        if (
+          card.name.toLowerCase().includes(this.searchText.toLowerCase()) &&
+          card.select.some((item) => this.chips.includes(item))
+        ) {
+          acc[key] = card; // Directly mutate accumulator
         }
-        const filteredCards = this.cards.filter((card) =>
-          card.name.toLowerCase().includes(this.searchText.toLowerCase())
-        )
-        return filteredCards 
-      }
-    },
-    methods: {
-      handleSubmit(e) {
-        this.editingCard = null
-        const item  = {
-          ...e,
-          id: this.cards.length,
-        }
-        this.cards.push(item)
-      },
-      handleInput(e) {
-        this.searchText = e
-      },
-      handleDelete(id) {
-        this.cards = this.cards.filter((card) => card.id !== id)
-      },
-      handleEdit(id) {
-        this.editingCard = this.cards.find((card) => card.id === id)
-        this.showModal = true
-      },
-      handleEditSubmit(e) {
-        this.showModal = false
-        const index = this.cards.findIndex((card) => card.id === e.id)
-        this.cards[index] = e
-      }
-    }
+        return acc;
+      }, {}); // Initial empty object (optional for immutability)
 
-  }
+      return filteredCards;
+    },
+  },
+  methods: {
+    handleSubmit(e) {
+      this.editingCard = null;
+      const id = Math.random().toString(36).substr(2, 9);
+      const item = {
+        ...e,
+        id,
+      };
+      this.cards = { ...this.cards, [id]: { ...item } };
+    },
+    handleDelete(id) {
+      delete this.cards[id];
+    },
+    handleEdit(id) {
+      this.editingCard = this.cards[id];
+      this.showModal = true;
+    },
+    handleEditSubmit(e) {
+      this.showModal = false;
+      this.cards[e.id] = e;
+      this.editingCard = null;
+    },
+    closeModal() {
+      this.editingCard = null;
+      this.showModal = false;
+    },
+  },
+};
 </script>
-
-
