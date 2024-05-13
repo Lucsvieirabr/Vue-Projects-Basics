@@ -56,61 +56,92 @@
     </v-btn>
   </form>
 </template>
-<script setup>
-  import { reactive, ref } from 'vue'
-  import { useVuelidate } from '@vuelidate/core'
-  import { email, required } from '@vuelidate/validators'
 
-  const initialState = {
-    name: '',
-    desc: '',
-    file: null,
-    select: null,
-    imgUrl: '',
-  }
+<script>
+  import { ref, reactive, onMounted } from 'vue'
+import { useVuelidate } from '@vuelidate/core'
+import { required } from '@vuelidate/validators'
 
-  const state = reactive({
-    ...initialState,
-  })
-
-  const items = [
-    'Perishable',
-    'Cleaning',
-    'Hygiene',
-    'Home',
-  ]
-  const rules = {
-    name: { required },
-    desc: { required },
-    select: { opcional: true },
-    items: { opcional: true },
-  }
-
-  const v$ = useVuelidate(rules, state)
-
-  const emit = defineEmits(['submit'])
-  const trySubmit = async () => {
-  if (await v$.value.$validate()) {
-    const reader = new FileReader();
-    reader.readAsDataURL(state.file);
-
-    reader.onload = () => {
-      const myimgUrl = reader.result; // Access the result from FileReader
-      state.imgUrl = myimgUrl;
-      emit('submit', state)
+export default {
+  props: {
+    editing: {
+      type: Object,
+      default: null
+    }
+  },
+  data() {
+    return {
+      initialState: {
+        name: '',
+        desc: '',
+        file: null,
+        select: null,
+        imgUrl: '',
+        id: null,
+      },
+      state: {
+        name: '',
+        desc: '',
+        file: null,
+        select: null,
+        imgUrl: '',
+        id: null,
+      },
+      items: [
+        'Perishable',
+        'Cleaning',
+        'Hygiene',
+        'Home',
+      ],
+      v$: useVuelidate({
+        name: { required: true },
+        desc: { required: true },
+        select: { opcional: true },
+        items: { opcional: true },
+      }, this.state)
     };
+  },
+  methods: {
+    trySubmit() {
+      this.v$.$validate().then(async () => {
+        if (this.v$.$error) return;
+        
+        const reader = new FileReader();
+        reader.readAsDataURL(this.state.file);
 
-    reader.onerror = (error) => {
-      console.error('Error occurred while reading the file:', error);
-    };
+        reader.onload = () => {
+          const myimgUrl = reader.result; // Access the result from FileReader
+          this.state.imgUrl = myimgUrl;
+          if(this.editing) {
+            this.$emit('edit', this.state);
+            return;
+          } 
+          this.$emit('submit', this.state);
+        };
+
+        reader.onerror = (error) => {
+          console.error('Error occurred while reading the file:', error);
+        };
+      });
+    },
+    clear() {
+      this.v$.$reset();
+
+      for (const key in this.initialState) {
+        this.state[key] = this.initialState[key];
+      }
+    }
+  },
+  mounted() {
+    if(this.editing) {
+      this.state.name = this.editing.name;
+      this.state.desc = this.editing.desc;
+      this.state.select = this.editing.select;
+      this.state.file = this.editing.file;
+      this.state.imgUrl = this.editing.imgUrl;
+      this.state.id = this.editing.id;
+    }
   }
 };
 
-  function clear () {
-    v$.value.$reset()
-
-    for (const [key, value] of Object.entries(initialState)) {
-      state[key] = value
-    }
-  }
 </script>
