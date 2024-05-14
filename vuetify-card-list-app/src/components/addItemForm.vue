@@ -1,42 +1,39 @@
 <template>
-  <form @submit.prevent class="bg-surface pa-4 rounded">
+  <v-form @submit.prevent class="bg-surface pa-4 rounded" ref="form">
     <v-text-field
       v-model="state.name"
       :counter="10"
-      :error-messages="v$.name.$errors.map((e) => e.$message)"
+      :rules="rules.nameRules"
       label="Item Name"
       required
-      @blur="v$.name.$touch"
-      @input="v$.name.$touch"
     ></v-text-field>
 
     <v-text-field
       v-model="state.desc"
       :counter="30"
-      :error-messages="v$.desc.$errors.map((e) => e.$message)"
+      :rules="rules.descRules"
       label="Item Description"
       required
-      @blur="v$.desc.$touch"
-      @input="v$.desc.$touch"
     ></v-text-field>
 
     <v-select
-      v-model="state.select"
-      :error-messages="v$.select.$errors.map((e) => e.$message)"
-      :items="items"
-      label="Chips"
+      v-model="state.tagsValues"
+      :rules="rules.tagsRules"
+      :items="tags"
+      label="Tags"
       multiple
       required
-      @blur="v$.select.$touch"
-      @change="v$.select.$touch"
     ></v-select>
 
     <v-file-input
+      ref="fileInput"
       v-model="state.file"
+      :rules="rules.fileRules"
       accept="image/png, image/jpeg, image/bmp"
       label="Item Image"
       placeholder="Pick an avatar"
       prepend-icon="mdi-camera"
+      required
     ></v-file-input>
 
     <v-btn class="ma-4" size="small" color="teal" @click="trySubmit">
@@ -45,12 +42,10 @@
     <v-btn color="red-darken-1" class="ma-4" size="small" @click="clear">
       clear
     </v-btn>
-  </form>
+  </v-form>
 </template>
 
 <script>
-import { useVuelidate } from "@vuelidate/core";
-
 export default {
   props: {
     editing: {
@@ -64,59 +59,58 @@ export default {
         name: "",
         desc: "",
         file: null,
-        select: null,
+        tagsValues: null,
         imgUrl: "",
         id: null,
       },
-      state: {
-        name: "",
-        desc: "",
-        file: null,
-        select: null,
-        imgUrl: "",
-        id: null,
+      state: { ...this.initialState },
+      tags: ["Perishable", "Cleaning", "Hygiene", "Home"],
+
+      rules: {
+        nameRules: [
+          (v) => !!v || "Name is required",
+          (v) =>
+            (v && v.length <= 10) || "Name must be less than 10 characters",
+        ],
+        descRules: [
+          (v) => !!v || "Description is required",
+          (v) =>
+            (v && v.length <= 30) ||
+            "Description must be less than 30 characters",
+        ],
+        fileRules: [(value) => value.length > 0 || "Image is required"],
+        tagsRules: [(value) => !!value || "Tags are required"],
       },
-      items: ["Perishable", "Cleaning", "Hygiene", "Home"],
-      v$: useVuelidate(
-        {
-          name: { required: true },
-          desc: { required: true },
-          select: { opcional: true },
-          items: { opcional: true },
-        },
-        this.state
-      ),
     };
   },
   methods: {
-    trySubmit() {
-      this.v$.$validate().then(async () => {
-        if (this.v$.$error) return;
+    async trySubmit() {
+      const { valid } = await this.$refs.form.validate();
+      if (!valid) return;
 
-        const reader = new FileReader();
-        reader.readAsDataURL(this.state.file);
+      const fileReader = new FileReader();
+      const file = this.state.file;
 
-        reader.onload = () => {
-          const myimgUrl = reader.result; // Access the result from FileReader
-          this.state.imgUrl = myimgUrl;
+      return new Promise((resolve, reject) => {
+        fileReader.readAsDataURL(file);
+
+        fileReader.onload = () => {
+          const imgUrl = fileReader.result;
+
           if (this.editing) {
-            this.$emit("edit", this.state);
+            this.$emit("edit", { ...this.state, imgUrl });
+            resolve();
             return;
           }
-          this.$emit("submit", this.state);
+
+          this.$emit("submit", { ...this.state, imgUrl });
         };
 
-        reader.onerror = (error) => {
-          console.error("Error occurred while reading the file:", error);
-        };
+        fileReader.onerror = (error) => reject(error);
       });
     },
     clear() {
-      this.v$.$reset();
-
-      for (const key in this.initialState) {
-        this.state[key] = this.initialState[key];
-      }
+      this.state = { ...this.initialState };
     },
   },
   mounted() {

@@ -34,9 +34,9 @@
           />
         </v-col>
         <v-col cols="6" md="3" class="justify-start">
-          <chips-input
-            :model-value="chips"
-            @update:model-value="(newValue) => (chips = newValue)"
+          <tags-input
+            :model-value="tags"
+            @update:model-value="(newValue) => (tags = newValue)"
           />
         </v-col>
       </v-row>
@@ -66,7 +66,7 @@ import HeroMain from "@/components/HeroMain.vue";
 import ModalAddItems from "@/components/modalAddItems.vue";
 import CustomCard from "@/components/CustomCard.vue";
 import SearchInput from "@/components/SearchInput.vue";
-import ChipsInput from "@/components/chipsInput.vue";
+import TagsInput from "@/components/tagsInput.vue";
 export default {
   data() {
     return {
@@ -74,19 +74,19 @@ export default {
       searchText: "",
       editingCard: null,
       showModal: false,
-      chips: [],
+      tags: [],
     };
   },
   computed: {
     visibleCards() {
-      if (!this.searchText && !this.chips.length) {
+      if (!this.searchText && !this.tags.length) {
         return this.cards;
       }
       const filteredCards = Object.keys(this.cards).reduce((acc, key) => {
         const card = this.cards[key];
         if (
           card.name.toLowerCase().includes(this.searchText.toLowerCase()) &&
-          card.select.some((item) => this.chips.includes(item))
+          card.tagsValues.some((item) => this.tags.includes(item))
         ) {
           acc[key] = card; // Directly mutate accumulator
         }

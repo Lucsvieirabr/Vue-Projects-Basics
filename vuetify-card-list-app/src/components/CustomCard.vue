@@ -9,7 +9,7 @@
     </v-card-subtitle>
     <v-card-text>
       <v-chip
-        v-for="(item, i) in cardInfo.select"
+        v-for="(item, i) in cardInfo.tagsValues"
         :key="i"
         :color="chipsColors[item.toLowerCase()]"
         class="ma-2"

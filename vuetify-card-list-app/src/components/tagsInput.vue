@@ -1,8 +1,8 @@
 <template>
   <v-select
     v-model="model"
-    :items="items"
-    label="Chips"
+    :items="tags"
+    label="Tags"
     chips
     multiple
     bg-color="#64B5F6"
@@ -15,7 +15,7 @@
 <script>
 export default {
   data: () => ({
-    items: ["Perishable", "Cleaning", "Hygiene", "Home"],
+    tags: ["Perishable", "Cleaning", "Hygiene", "Home"],
   }),
   props: {
     modelValue: {
