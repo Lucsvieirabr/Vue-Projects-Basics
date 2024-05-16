@@ -1,8 +1,10 @@
 <template>
   <hero-main
+    v-if="user"
     title="Card List App"
     subtitle="A Vuetify List of cards"
     @signOut="signOut"
+    :user="user"
   />
   <v-container class="d-flex justify-center">
     <v-btn
@@ -75,6 +77,7 @@ export default {
   data() {
     return {
       cards: [],
+      user: null,
       searchText: "",
       editingCard: null,
       showModal: false,
@@ -114,10 +117,11 @@ export default {
     },
     async getUserCards() {
       const { data: user } = await supabase.auth.getUser();
+      this.user = user.user;
       const userCards = await supabase
         .from("CardsTable")
         .select("*")
-        .eq("user_id", user.user.id);
+        .eq("user_id", this.user.id);
       if (userCards.error) {
         this.displaySnackbar(userCards.error.message);
         return;
@@ -125,7 +129,6 @@ export default {
       return userCards.data;
     },
     async insertCardToSupabase(cardToInsert) {
-      console.log("oi");
       const { data, error } = await supabase
         .from("CardsTable")
         .insert([
