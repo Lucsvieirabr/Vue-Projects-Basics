@@ -17,9 +17,9 @@
     ></v-text-field>
 
     <v-select
-      v-model="state.tagsValues"
+      v-model="state.tags"
       :rules="rules.tagsRules"
-      :items="tags"
+      :items="tagsValues"
       label="Tags"
       multiple
       required
@@ -59,12 +59,12 @@ export default {
         name: "",
         desc: "",
         file: null,
-        tagsValues: null,
-        imgUrl: "",
+        tags: null,
+        img_url: "",
         id: null,
       },
       state: { ...this.initialState },
-      tags: ["Perishable", "Cleaning", "Hygiene", "Home"],
+      tagsValues: ["Perishable", "Cleaning", "Hygiene", "Home"],
 
       rules: {
         nameRules: [
@@ -98,12 +98,14 @@ export default {
           const imgUrl = fileReader.result;
 
           if (this.editing) {
-            this.$emit("edit", { ...this.state, imgUrl });
+            this.state.img_url = imgUrl;
+            this.$emit("edit", { ...this.state });
             resolve();
             return;
           }
 
-          this.$emit("submit", { ...this.state, imgUrl });
+          this.state.img_url = imgUrl;
+          this.$emit("submit", { ...this.state });
         };
 
         fileReader.onerror = (error) => reject(error);
@@ -112,10 +114,22 @@ export default {
     clear() {
       this.state = { ...this.initialState };
     },
+
+    transformUrlToFile(url) {
+      const fileName = "myFile.jpg";
+      fetch(url).then(async (response) => {
+        const contentType = response.headers.get("content-type");
+        const blob = await response.blob();
+        const file = new File([blob], fileName, { contentType });
+        this.state.file = file;
+      });
+    },
   },
-  mounted() {
+  async mounted() {
     if (this.editing) {
-      this.state = { ...this.editing };
+      this.state = { ...this.editing, file: null };
+      this.state.tags = JSON.parse(this.state.tags);
+      this.transformUrlToFile(this.state.img_url);
     }
   },
 };

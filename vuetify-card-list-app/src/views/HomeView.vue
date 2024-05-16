@@ -1,6 +1,9 @@
 <template>
-  <hero-main title="Card List App" subtitle="A Vuetify List of cards" />
-
+  <hero-main
+    title="Card List App"
+    subtitle="A Vuetify List of cards"
+    @signOut="signOut"
+  />
   <v-container class="d-flex justify-center">
     <v-btn
       class="position-relative"
@@ -43,11 +46,20 @@
       <v-col v-for="(card, i) in visibleCards" :key="i" cols="12" sm="6" md="4">
         <custom-card
           :cardInfo="card"
-          @delete="handleDelete"
-          @edit="handleEdit"
+          @delete="handleDelete(i)"
+          @edit="handleEdit(i)"
         />
       </v-col>
     </v-row>
+    <v-snackbar v-if="snackbar" v-model="snackbar">
+      {{ errorCtx }}
+
+      <template v-slot:actions>
+        <v-btn color="pink" variant="text" @click="snackbar = false">
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -57,14 +69,18 @@ import ModalAddItems from "@/components/modalAddItems.vue";
 import CustomCard from "@/components/CustomCard.vue";
 import SearchInput from "@/components/SearchInput.vue";
 import TagsInput from "@/components/tagsInput.vue";
+import { supabase } from "../lib/supabaseClient";
+import router from "../router/index.js";
 export default {
   data() {
     return {
-      cards: {},
+      cards: [],
       searchText: "",
       editingCard: null,
       showModal: false,
       tags: [],
+      errorCtx: "",
+      snackbar: false,
     };
   },
   computed: {
@@ -72,46 +88,121 @@ export default {
       if (!this.searchText && !this.tags.length) {
         return this.cards;
       }
-      const filteredCards = Object.keys(this.cards).reduce((acc, key) => {
-        const card = this.cards[key];
-        if (
-          card.name.toLowerCase().includes(this.searchText.toLowerCase()) &&
-          card.tagsValues.some((item) => this.tags.includes(item))
-        ) {
-          acc[key] = card; // Directly mutate accumulator
+      const filteredCards = this.cards.filter((card) => {
+        if (this.searchText) {
+          if (
+            !card.name.toLowerCase().includes(this.searchText.toLowerCase())
+          ) {
+            return false;
+          }
         }
-        return acc;
-      }, {}); // Initial empty object (optional for immutability)
+        if (this.tags.length) {
+          if (!this.tags.every((tag) => card.tags.includes(tag))) {
+            return false;
+          }
+        }
+        return true;
+      });
 
       return filteredCards;
     },
   },
   methods: {
-    handleSubmit(e) {
+    displaySnackbar(message) {
+      this.snackbar = true;
+      this.errorCtx = message;
+    },
+    async getUserCards() {
+      const { data: user } = await supabase.auth.getUser();
+      const userCards = await supabase
+        .from("CardsTable")
+        .select("*")
+        .eq("user_id", user.user.id);
+      if (userCards.error) {
+        this.displaySnackbar(userCards.error.message);
+        return;
+      }
+      return userCards.data;
+    },
+    async insertCardToSupabase(cardToInsert) {
+      console.log("oi");
+      const { data, error } = await supabase
+        .from("CardsTable")
+        .insert([
+          {
+            name: cardToInsert.name,
+            desc: cardToInsert.desc,
+            img_url: cardToInsert.img_url,
+            tags: JSON.stringify(cardToInsert.tags),
+          },
+        ])
+        .select();
+      if (error) {
+        this.displaySnackbar(error.message);
+        return;
+      }
+    },
+    async handleSubmit(e) {
       this.editingCard = null;
-      const id = Math.random().toString(36).substr(2, 9);
-      const item = {
-        ...e,
-        id,
-      };
-      this.cards = { ...this.cards, [id]: { ...item } };
+      this.insertCardToSupabase(e).then(async () => {
+        this.cards = await this.getUserCards();
+      });
     },
-    handleDelete(id) {
-      delete this.cards[id];
+    async handleDelete(id) {
+      const card = this.cards[id];
+      const { error } = await supabase
+        .from("CardsTable")
+        .delete()
+        .eq("id", card.id);
+      if (error) {
+        this.displaySnackbar(error.message);
+        return;
+      }
+      this.cards = await this.getUserCards();
     },
-    handleEdit(id) {
-      this.editingCard = this.cards[id];
+    handleEdit(i) {
+      this.editingCard = this.cards[i];
       this.showModal = true;
     },
-    handleEditSubmit(e) {
+    async updateCardToSupabase(cardToInsert) {
+      console.log(cardToInsert);
+      const { data, error } = await supabase
+        .from("CardsTable")
+        .update({
+          name: cardToInsert.name,
+          desc: cardToInsert.desc,
+          img_url: cardToInsert.img_url,
+          tags: JSON.stringify(cardToInsert.tags),
+        })
+        .eq("id", cardToInsert.id)
+        .select();
+      if (error) {
+        this.displaySnackbar(error.message);
+        return;
+      }
+    },
+    async handleEditSubmit(cardToInsert) {
       this.showModal = false;
-      this.cards[e.id] = e;
+      this.updateCardToSupabase(cardToInsert).then(async () => {
+        this.cards = await this.getUserCards();
+      });
       this.editingCard = null;
     },
     closeModal() {
       this.editingCard = null;
       this.showModal = false;
     },
+    async signOut() {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.log(error);
+        return;
+      }
+      router.push("/");
+    },
+  },
+  async mounted() {
+    this.cards = await this.getUserCards();
   },
 };
 </script>

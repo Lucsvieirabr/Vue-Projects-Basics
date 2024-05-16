@@ -1,6 +1,6 @@
 <template>
   <v-card class="mx-auto rounded-xl" max-width="450">
-    <v-img :aspect-ratio="16 / 9" :src="`${cardInfo.imgUrl}`" cover> </v-img>
+    <v-img :aspect-ratio="16 / 9" :src="`${cardInfo.img_url}`" cover> </v-img>
     <v-card-title class="flex-column align-start text-h4">
       {{ cardInfo.name }}
     </v-card-title>
@@ -9,7 +9,7 @@
     </v-card-subtitle>
     <v-card-text>
       <v-chip
-        v-for="(item, i) in cardInfo.tagsValues"
+        v-for="(item, i) in JSON.parse(cardInfo.tags)"
         :key="i"
         :color="chipsColors[item.toLowerCase()]"
         class="ma-2"
